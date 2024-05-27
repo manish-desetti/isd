@@ -4,16 +4,17 @@ from isd.exception import isdException
 from isd.configuration.s3_operations import S3Operation
 from isd.components.data_ingestion import DataIngestion
 from isd.components.data_validation import DataValidation
+from isd.components.model_trainer import ModelTrainer
 
 from isd.entity.config_entity import (DataIngestionConfig,
-                                      DataValidationConfig)
-from isd.entity.artifacts_entity import (DataIngestionArtifact,DataValidationArtifact)
+                                      DataValidationConfig, ModelTrainerConfig)
+from isd.entity.artifacts_entity import (DataIngestionArtifact,DataValidationArtifact,ModelTrainerArtifact)
 
 class TrainPipeline:
     def __init__(self):
         self.data_ingestion_config = DataIngestionConfig()
         self.data_validation_config = DataValidationConfig()
-
+        self.model_trainer_config = ModelTrainerConfig()
 
 
     def start_data_ingestion(self)-> DataIngestionArtifact:
@@ -61,7 +62,17 @@ class TrainPipeline:
 
         except Exception as e:
             raise isdException(e, sys) from e
+    def start_model_trainer(self
+    ) -> ModelTrainerArtifact:
+        try:
+            model_trainer = ModelTrainer(
+                model_trainer_config=self.model_trainer_config,
+            )
+            model_trainer_artifact = model_trainer.initiate_model_trainer()
+            return model_trainer_artifact
 
+        except Exception as e:
+            raise isdException(e, sys)
 
 
 
@@ -75,7 +86,11 @@ class TrainPipeline:
             data_validation_artifact = self.start_data_validation(
                 data_ingestion_artifact=data_ingestion_artifact
             )
-
+            if data_validation_artifact.validation_status == True:
+                model_trainer_artifact = self.start_model_trainer()
+                #model_pusher_artifact = self.start_model_pusher(model_trainer_artifact=model_trainer_artifact,s3=self.s3_operations)
+            else :
+                raise Exception("data is not in correct format")
 
 
         except Exception as e:
